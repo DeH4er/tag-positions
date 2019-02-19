@@ -1,0 +1,7 @@
+app
+[count=1]
+[every=count*1000+500]
+[rect='0 0 500 500']
+[tag='TAG1']
+[url='...']
+[times='unlimited']

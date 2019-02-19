@@ -6,10 +6,11 @@
  * [tag='TAG1']
  * [url='...']
  * [times='unlimited']
+ * [interactive='false']
  */
 
-import { interval } from 'rxjs';
-import { take } from 'rxjs/operators';
+import { interval, fromEvent, of, iif } from 'rxjs';
+import { take, mergeMap, map, tap, filter } from 'rxjs/operators';
 
 import axios from 'axios';
 import { argv } from 'yargs';
@@ -20,6 +21,7 @@ const rect = argv.rect || '0 0 500 500';
 const tag = argv.tag || 'TAG1';
 const url = argv.url || "http://localhost:8030/api/config/tag_positions";
 const times = argv.times || 'unlimited';
+const interactive = argv.interactive || 'false';
 
 const [minx, miny, maxx, maxy] = rect.split(' ');
 
@@ -59,7 +61,7 @@ const generatePositions = (count, minx, miny, maxx, maxy) => {
 
 const makeRequest = (url, obj) => {
   axios.post(url, obj)
-    .catch( err => console.error('error'));
+    .catch( err => console.error('request error'));
 };
 
 const generateObject = (tag, positions) => {
@@ -73,19 +75,46 @@ const run = () => {
   makeRequest(url, obj);
 }
 
-run();
+if (interactive === 'true') {
+  const stdin = process.stdin;
+  stdin.setEncoding('utf-8');
+  const input = fromEvent(stdin, 'data');
 
-let timer;
+  console.log('quit: CTRL+c');
 
-if (times != 'unlimited') {
-  timer = interval(every)
-    .pipe(
-      take(times - 1)
-    )
+  const point$ = input.pipe(
+    map( line => line.split(' ')),
+    filter(nums => nums.length === 2),
+    map( p => [+p[0], +p[1]])
+  );
+
+  point$
+    .subscribe(
+      point => {
+        console.log(point);
+        const encoded_point = [encode(point[0]), encode(point[1]), encode(0)]
+        const req_obj = generateObject(tag, encoded_point)
+        makeRequest(url, req_obj);
+      },
+      err => console.log(err),
+      () => console.log('bye')
+    );
+
 } else {
-  timer = interval(every)
-}
-
-timer.subscribe( x => {
   run();
-});
+
+  let timer;
+
+  if (times != 'unlimited') {
+    timer = interval(every)
+      .pipe(
+        take(times - 1)
+      )
+  } else {
+    timer = interval(every)
+  }
+
+  timer.subscribe( x => {
+    run();
+  });
+}

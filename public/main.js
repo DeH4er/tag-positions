@@ -24,6 +24,7 @@ var rect = _yargs.argv.rect || '0 0 500 500';
 var tag = _yargs.argv.tag || 'TAG1';
 var url = _yargs.argv.url || "http://localhost:8030/api/config/tag_positions";
 var times = _yargs.argv.times || 'unlimited';
+var interactive = _yargs.argv.interactive || 'false';
 
 var _rect$split = rect.split(' '),
     _rect$split2 = _slicedToArray(_rect$split, 4),
@@ -68,7 +69,7 @@ var generatePositions = function generatePositions(count, minx, miny, maxx, maxy
 
 var makeRequest = function makeRequest(url, obj) {
   _axios.default.post(url, obj).catch(function (err) {
-    return console.error("error");
+    return console.error('request error');
   });
 };
 
@@ -88,15 +89,39 @@ var run = function run() {
   makeRequest(url, obj);
 };
 
-run();
-var timer;
-
-if (times != 'unlimited') {
-  timer = (0, _rxjs.interval)(every).pipe((0, _operators.take)(times - 1));
+if (interactive === 'true') {
+  var stdin = process.stdin;
+  stdin.setEncoding('utf-8');
+  var input = (0, _rxjs.fromEvent)(stdin, 'data');
+  console.log('quit: CTRL+c');
+  var point$ = input.pipe((0, _operators.map)(function (line) {
+    return line.split(' ');
+  }), (0, _operators.filter)(function (nums) {
+    return nums.length === 2;
+  }), (0, _operators.map)(function (p) {
+    return [+p[0], +p[1]];
+  }));
+  point$.subscribe(function (point) {
+    console.log(point);
+    var encoded_point = [encode(point[0]), encode(point[1]), encode(0)];
+    var req_obj = generateObject(tag, encoded_point);
+    makeRequest(url, req_obj);
+  }, function (err) {
+    return console.log(err);
+  }, function () {
+    return console.log('bye');
+  });
 } else {
-  timer = (0, _rxjs.interval)(every);
-}
-
-timer.subscribe(function (x) {
   run();
-});
+  var timer;
+
+  if (times != 'unlimited') {
+    timer = (0, _rxjs.interval)(every).pipe((0, _operators.take)(times - 1));
+  } else {
+    timer = (0, _rxjs.interval)(every);
+  }
+
+  timer.subscribe(function (x) {
+    run();
+  });
+}

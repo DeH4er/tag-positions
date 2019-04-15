@@ -61,11 +61,19 @@ const generatePositions = (count, minx, miny, maxx, maxy) => {
 
 const makeRequest = (url, obj) => {
   axios.post(url, obj)
-    .catch( err => console.error('request error'));
+    .catch( err => {
+      console.error('request error')
+    });
+};
+
+const flat = (list) => {
+    return list.reduce(function (a, b) {
+        return a.concat(Array.isArray(b) ? flat(b) : b);
+    }, []);
 };
 
 const generateObject = (tag, positions) => {
-  const data = positions.flat().reduce( (acc, val) => acc + val, []);
+  const data = flat(positions).reduce( (acc, val) => acc + val, []);
   return { devaddr: tag, data: data };
 }
 
@@ -85,6 +93,7 @@ if (interactive === 'true') {
   const point$ = input.pipe(
     map( line => line.split(' ')),
     filter(nums => nums.length === 2),
+    tap(nums => console.log('got point')),
     map( p => [+p[0], +p[1]])
   );
 
@@ -94,6 +103,7 @@ if (interactive === 'true') {
         console.log(point);
         const encoded_point = [encode(point[0]), encode(point[1]), encode(0)]
         const req_obj = generateObject(tag, encoded_point)
+        console.log(req_obj);
         makeRequest(url, req_obj);
       },
       err => console.log(err),

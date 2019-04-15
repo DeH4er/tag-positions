@@ -69,12 +69,18 @@ var generatePositions = function generatePositions(count, minx, miny, maxx, maxy
 
 var makeRequest = function makeRequest(url, obj) {
   _axios.default.post(url, obj).catch(function (err) {
-    return console.error('request error');
+    console.error('request error');
   });
 };
 
+var flat = function flat(list) {
+  return list.reduce(function (a, b) {
+    return a.concat(Array.isArray(b) ? flat(b) : b);
+  }, []);
+};
+
 var generateObject = function generateObject(tag, positions) {
-  var data = positions.flat().reduce(function (acc, val) {
+  var data = flat(positions).reduce(function (acc, val) {
     return acc + val;
   }, []);
   return {
@@ -98,6 +104,8 @@ if (interactive === 'true') {
     return line.split(' ');
   }), (0, _operators.filter)(function (nums) {
     return nums.length === 2;
+  }), (0, _operators.tap)(function (nums) {
+    return console.log('got point');
   }), (0, _operators.map)(function (p) {
     return [+p[0], +p[1]];
   }));
@@ -105,6 +113,7 @@ if (interactive === 'true') {
     console.log(point);
     var encoded_point = [encode(point[0]), encode(point[1]), encode(0)];
     var req_obj = generateObject(tag, encoded_point);
+    console.log(req_obj);
     makeRequest(url, req_obj);
   }, function (err) {
     return console.log(err);

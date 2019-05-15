@@ -9,11 +9,11 @@
  * [interactive='false']
  */
 
-import { interval, fromEvent, of, iif } from 'rxjs';
-import { take, mergeMap, map, tap, filter } from 'rxjs/operators';
-
 import axios from 'axios';
+import { fromEvent, interval } from 'rxjs';
+import { filter, map, take, tap } from 'rxjs/operators';
 import { argv } from 'yargs';
+
 
 const count = argv.count || 1;
 const every = argv.every || count * 1000 + 500;
@@ -21,6 +21,13 @@ const rect = argv.rect || '0 0 500 500';
 const tag = argv.tag || 'TAG1';
 const url = argv.url || "http://localhost:8030/api/config/tag_positions";
 const times = argv.times || 'unlimited';
+
+const start = argv.start || null;
+const end = argv.end || null;
+const step = argv.step || null;
+const coord = argv.coord || null;
+const lineStart = argv.lineStart || null;
+
 const interactive = argv.interactive || 'false';
 
 const [minx, miny, maxx, maxy] = rect.split(' ');
@@ -30,7 +37,6 @@ const random = (min, max) => (Math.floor(Math.random() * (max - min)) + min);
 const encode = (num) => {
   const res = ((num+0x10000).toString(16).substr(-4).toUpperCase())
   return res;
-
 };
 
 const generatePosition = (minx, miny, maxx, maxy) => {
@@ -59,8 +65,29 @@ const generatePositions = (count, minx, miny, maxx, maxy) => {
   return positions;
 }
 
+const generateLineMotion = (coord, lineStart, start, end, step) => {
+  let positions = [];
+
+  for (let i = start; i <= end; i += step) {
+    let position;
+    if (coord === 'x') {
+      console.log([i, lineStart]);
+      position = [encode(i), encode(lineStart), encode(0)];
+    } else {
+      console.log([lineStart, i]);
+      position = [encode(lineStart), encode(i), encode(0)];
+    }
+    positions.push(position);
+  }
+
+  return positions;
+}
+
 const makeRequest = (url, obj) => {
   axios.post(url, obj)
+    .then(() => {
+      console.log('request success');
+    })
     .catch( err => {
       console.error('request error')
     });
@@ -109,7 +136,11 @@ if (interactive === 'true') {
       err => console.log(err),
       () => console.log('bye')
     );
+} else if (start !== null && end !== null && step !== null && coord !== null && lineStart !== null) {
 
+  const pos = generateLineMotion(coord, parseInt(lineStart), parseInt(start), parseInt(end), parseInt(step));
+  const obj = generateObject(tag, pos);
+  makeRequest(url, obj);
 } else {
   run();
 

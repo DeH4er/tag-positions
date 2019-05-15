@@ -1,10 +1,10 @@
 "use strict";
 
+var _axios = _interopRequireDefault(require("axios"));
+
 var _rxjs = require("rxjs");
 
 var _operators = require("rxjs/operators");
-
-var _axios = _interopRequireDefault(require("axios"));
 
 var _yargs = require("yargs");
 
@@ -24,6 +24,11 @@ var rect = _yargs.argv.rect || '0 0 500 500';
 var tag = _yargs.argv.tag || 'TAG1';
 var url = _yargs.argv.url || "http://localhost:8030/api/config/tag_positions";
 var times = _yargs.argv.times || 'unlimited';
+var start = _yargs.argv.start || null;
+var end = _yargs.argv.end || null;
+var step = _yargs.argv.step || null;
+var coord = _yargs.argv.coord || null;
+var lineStart = _yargs.argv.lineStart || null;
 var interactive = _yargs.argv.interactive || 'false';
 
 var _rect$split = rect.split(' '),
@@ -67,8 +72,30 @@ var generatePositions = function generatePositions(count, minx, miny, maxx, maxy
   return positions;
 };
 
+var generateLineMotion = function generateLineMotion(coord, lineStart, start, end, step) {
+  var positions = [];
+
+  for (var i = start; i <= end; i += step) {
+    var position = void 0;
+
+    if (coord === 'x') {
+      console.log([i, lineStart]);
+      position = [encode(i), encode(lineStart), encode(0)];
+    } else {
+      console.log([lineStart, i]);
+      position = [encode(lineStart), encode(i), encode(0)];
+    }
+
+    positions.push(position);
+  }
+
+  return positions;
+};
+
 var makeRequest = function makeRequest(url, obj) {
-  _axios.default.post(url, obj).catch(function (err) {
+  _axios.default.post(url, obj).then(function () {
+    console.log('request success');
+  }).catch(function (err) {
     console.error('request error');
   });
 };
@@ -120,6 +147,10 @@ if (interactive === 'true') {
   }, function () {
     return console.log('bye');
   });
+} else if (start !== null && end !== null && step !== null && coord !== null && lineStart !== null) {
+  var pos = generateLineMotion(coord, parseInt(lineStart), parseInt(start), parseInt(end), parseInt(step));
+  var obj = generateObject(tag, pos);
+  makeRequest(url, obj);
 } else {
   run();
   var timer;
